@@ -2,7 +2,7 @@
 
 Một mini-game lấy cảm hứng từ Flappy Bird huyền thoại, bạn sẽ điều khiển chiếc xe máy len lỏi qua các "chốt kẹt xe" đậm chất đường phố.
 
-**🎮 Trải nghiệm tại đây:** https://quangvinh-2011.github.io/n-ch-ng-ng-i-v-t/
+**🎮 Trải nghiệm tại đây:** https://quangvinh-2011.github.io/flappy-sai-gon/
 
 ## Cách chơi
 
