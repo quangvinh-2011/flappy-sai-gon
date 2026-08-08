@@ -1,15 +1,15 @@
 # 🛵 Né Kẹt Xe Sài Gòn
 
-Một mini-game lấy cảm hứng từ Flappy Bird, nơi bạn điều khiển chiếc xe máy len lỏi qua các "chốt kẹt xe" giữa khung cảnh Sài Gòn về đêm.
+Một mini-game lấy cảm hứng từ Flappy Bird huyền thoại, bạn sẽ điều khiển chiếc xe máy len lỏi qua các "chốt kẹt xe" đậm chất đường phố.
 
-**🎮 Chơi thử ngay:** https://quangvinh-2011.github.io/n-ch-ng-ng-i-v-t/
+**🎮 Trải nghiệm tại đây:** https://quangvinh-2011.github.io/n-ch-ng-ng-i-v-t/
 
 ## Cách chơi
 
 - Nhấn chuột, chạm màn hình, hoặc bấm phím `Space` để xe bốc đầu lên
 - Né các rào chắn công trình đang lấn ra đường
 - Mỗi lần vượt qua một chốt được +1 điểm
-- Điểm cao nhất được lưu lại trên trình duyệt của bạn
+- Kỷ lục của bạn sẽ được tự động lưu lại tha hồ phá đảo
 
 ## Công nghệ sử dụng
 
@@ -22,6 +22,5 @@ Một mini-game lấy cảm hứng từ Flappy Bird, nơi bạn điều khiển 
 
 Chỉ cần tải file `index.html` về và mở trực tiếp bằng trình duyệt, không cần cài đặt gì thêm.
 
----
 
-Được xây dựng như một phần trong quá trình học lập trình và xây dựng portfolio cá nhân.
+*Dự án nhỏ được thực hiện trong hành trình hoàn thiện portfolio cá nhân.*
