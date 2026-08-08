@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Né Kẹt Xe Sài Gòn</title>
+<style>
+  :root {
+    --sky-top: #1a1a2e;
+    --sky-mid: #16213e;
+    --sky-bottom: #0f3460;
+    --neon-orange: #f3722c;
+    --neon-yellow: #f9c74f;
+    --barrier: #43aa8b;
+    --barrier-dark: #2d7a63;
+    --cream: #f4f1de;
+    --danger: #e63946;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    height: 100%;
+    background: #0a0a12;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Segoe UI', 'Be Vietnam Pro', system-ui, sans-serif;
+    overflow: hidden;
+  }
+  .stage {
+    position: relative;
+    width: 400px;
+    max-width: 100vw;
+    aspect-ratio: 400 / 640;
+  }
+  canvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+    border-radius: 10px;
+    box-shadow: 0 0 0 3px var(--neon-yellow), 0 20px 60px rgba(0,0,0,0.6);
+    cursor: pointer;
+  }
+  .hud {
+    position: absolute;
+    top: 16px;
+    left: 0;
+    right: 0;
+    text-align: center;
+    color: var(--cream);
+    font-size: 32px;
+    font-weight: 800;
+    letter-spacing: 1px;
+    text-shadow: 0 0 8px rgba(0,0,0,0.8), 0 2px 4px rgba(0,0,0,0.6);
+    pointer-events: none;
+    user-select: none;
+  }
+  .overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    color: var(--cream);
+    background: radial-gradient(circle at center, rgba(15,52,96,0.85), rgba(10,10,18,0.95));
+    border-radius: 10px;
+    padding: 24px;
+    gap: 10px;
+  }
+  .overlay h1 {
+    font-size: 26px;
+    margin: 0 0 4px;
+    color: var(--neon-yellow);
+    text-shadow: 0 0 10px rgba(249,199,79,0.6);
+  }
+  .overlay p {
+    margin: 2px 0;
+    font-size: 14px;
+    opacity: 0.85;
+    line-height: 1.5;
+  }
+  .overlay .score-line {
+    font-size: 16px;
+    margin-top: 8px;
+    color: var(--neon-orange);
+    font-weight: 700;
+  }
+  .btn {
+    margin-top: 14px;
+    padding: 10px 26px;
+    background: var(--neon-orange);
+    color: #1a1a2e;
+    border: none;
+    border-radius: 999px;
+    font-weight: 800;
+    font-size: 15px;
+    cursor: pointer;
+    box-shadow: 0 4px 0 #c2540f;
+    transition: transform 0.1s;
+  }
+  .btn:active { transform: translateY(3px); box-shadow: 0 1px 0 #c2540f; }
+  .hidden { display: none !important; }
+  .credit {
+    position: absolute;
+    bottom: 6px;
+    right: 10px;
+    font-size: 10px;
+    color: rgba(244,241,222,0.35);
+    pointer-events: none;
+  }
+</style>
+</head>
+<body>
+
+<div class="stage">
+  <div class="hud" id="hud">0</div>
+  <canvas id="game" width="400" height="640"></canvas>
+
+  <div class="overlay" id="startScreen">
+    <h1>🛵 NÉ KẸT XE SÀI GÒN</h1>
+    <p>Chạy xe máy len lỏi qua dòng xe kẹt cứng giờ tan tầm.<br>Nhấn / chạm để bốc đầu xe lên.</p>
+    <p>Best: <span id="bestStart">0</span></p>
+    <button class="btn" id="startBtn">Bắt đầu</button>
+  </div>
+
+  <div class="overlay hidden" id="endScreen">
+    <h1>💥 KẸT XE RỒI!</h1>
+    <p class="score-line">Điểm: <span id="finalScore">0</span> &nbsp;|&nbsp; Best: <span id="bestScore">0</span></p>
+    <button class="btn" id="retryBtn">Chạy lại</button>
+  </div>
+
+  <div class="credit">made by Quang Vinh</div>
+</div>
+
+<script>
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+const W = canvas.width, H = canvas.height;
+
+const hud = document.getElementById('hud');
+const startScreen = document.getElementById('startScreen');
+const endScreen = document.getElementById('endScreen');
+const startBtn = document.getElementById('startBtn');
+const retryBtn = document.getElementById('retryBtn');
+const finalScoreEl = document.getElementById('finalScore');
+const bestScoreEl = document.getElementById('bestScore');
+const bestStartEl = document.getElementById('bestStart');
+
+const BEST_KEY = 'nekxsg_best';
+let best = Number(localStorage.getItem(BEST_KEY) || 0);
+bestStartEl.textContent = best;
+
+// ---- game constants ----
+const GRAVITY = 0.45;
+const FLAP = -8;
+const BARRIER_W = 58;
+const GAP = 165;
+const BARRIER_SPEED = 2.6;
+const SPAWN_EVERY = 100; // frames
+
+let state = 'idle'; // idle | playing | dead
+let frame = 0;
+let score = 0;
+let bike, barriers, buildings, particles;
+
+function resetGame() {
+  bike = { x: 90, y: H / 2, vy: 0, angle: 0 };
+  barriers = [];
+  particles = [];
+  score = 0;
+  frame = 0;
+  hud.textContent = '0';
+  buildings = makeSkyline();
+}
+
+function makeSkyline() {
+  const arr = [];
+  let x = 0;
+  while (x < W + 40) {
+    const w = 30 + Math.random() * 40;
+    const h = 60 + Math.random() * 140;
+    arr.push({ x, w, h });
+    x += w + 4;
+  }
+  return arr;
+}
+
+function spawnBarrier() {
+  const margin = 60;
+  const gapY = margin + Math.random() * (H - margin * 2 - GAP);
+  barriers.push({ x: W + BARRIER_W, gapY, passed: false });
+}
+
+function flap() {
+  if (state === 'idle') {
+    startGame();
+    return;
+  }
+  if (state === 'playing') {
+    bike.vy = FLAP;
+    for (let i = 0; i < 6; i++) {
+      particles.push({
+        x: bike.x - 14, y: bike.y + 6,
+        vx: -2 - Math.random() * 2, vy: (Math.random() - 0.5) * 2,
+        life: 20 + Math.random() * 10
+      });
+    }
+  }
+}
+
+function startGame() {
+  resetGame();
+  state = 'playing';
+  startScreen.classList.add('hidden');
+  endScreen.classList.add('hidden');
+}
+
+function endGame() {
+  state = 'dead';
+  if (score > best) {
+    best = score;
+    localStorage.setItem(BEST_KEY, best);
+  }
+  finalScoreEl.textContent = score;
+  bestScoreEl.textContent = best;
+  endScreen.classList.remove('hidden');
+}
+
+// ---- input ----
+canvas.addEventListener('mousedown', flap);
+canvas.addEventListener('touchstart', (e) => { e.preventDefault(); flap(); }, { passive: false });
+window.addEventListener('keydown', (e) => {
+  if (e.code === 'Space') { e.preventDefault(); flap(); }
+});
+startBtn.addEventListener('click', startGame);
+retryBtn.addEventListener('click', startGame);
+
+// ---- update ----
+function update() {
+  if (state !== 'playing') return;
+  frame++;
+
+  bike.vy += GRAVITY;
+  bike.y += bike.vy;
+  bike.angle = Math.max(-0.4, Math.min(0.9, bike.vy / 12));
+
+  if (frame % SPAWN_EVERY === 0) spawnBarrier();
+
+  for (const b of barriers) {
+    b.x -= BARRIER_SPEED;
+    if (!b.passed && b.x + BARRIER_W < bike.x) {
+      b.passed = true;
+      score++;
+      hud.textContent = score;
+    }
+  }
+  barriers = barriers.filter(b => b.x > -BARRIER_W);
+
+  for (const b of buildings) b.x -= BARRIER_SPEED * 0.3;
+  if (buildings.length && buildings[0].x + buildings[0].w < 0) {
+    buildings.shift();
+    const last = buildings[buildings.length - 1];
+    buildings.push({
+      x: last.x + last.w + 4,
+      w: 30 + Math.random() * 40,
+      h: 60 + Math.random() * 140
+    });
+  }
+
+  particles.forEach(p => { p.x += p.vx; p.y += p.vy; p.life--; });
+  particles = particles.filter(p => p.life > 0);
+
+  // collisions
+  const bikeR = 14;
+  if (bike.y - bikeR < 30 || bike.y + bikeR > H - 40) {
+    endGame();
+  }
+  for (const b of barriers) {
+    const inX = bike.x + bikeR > b.x && bike.x - bikeR < b.x + BARRIER_W;
+    if (inX) {
+      const inGap = bike.y - bikeR > b.gapY && bike.y + bikeR < b.gapY + GAP;
+      if (!inGap) endGame();
+    }
+  }
+}
+
+// ---- draw ----
+function drawSky() {
+  const g = ctx.createLinearGradient(0, 0, 0, H);
+  g.addColorStop(0, '#1a1a2e');
+  g.addColorStop(0.5, '#16213e');
+  g.addColorStop(1, '#0f3460');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, W, H);
+
+  // moon
+  ctx.beginPath();
+  ctx.fillStyle = '#f9c74f';
+  ctx.shadowColor = '#f9c74f';
+  ctx.shadowBlur = 20;
+  ctx.arc(330, 70, 22, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.shadowBlur = 0;
+}
+
+function drawSkyline() {
+  ctx.fillStyle = '#0d1b2a';
+  for (const b of buildings) {
+    const y = H - 40 - b.h;
+    ctx.fillRect(b.x, y, b.w, b.h);
+    ctx.fillStyle = '#f9c74f';
+    ctx.globalAlpha = 0.5;
+    for (let wy = y + 8; wy < H - 40 - 6; wy += 14) {
+      for (let wx = b.x + 5; wx < b.x + b.w - 5; wx += 10) {
+        if (Math.random() < 0.05) continue;
+        ctx.fillRect(wx, wy, 3, 5);
+      }
+    }
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = '#0d1b2a';
+  }
+}
+
+function drawRoad() {
+  ctx.fillStyle = '#2b2b3d';
+  ctx.fillRect(0, H - 40, W, 40);
+  ctx.strokeStyle = 'rgba(244,241,222,0.4)';
+  ctx.setLineDash([14, 10]);
+  ctx.lineWidth = 3;
+  const offset = -(frame * BARRIER_SPEED) % 24;
+  ctx.beginPath();
+  ctx.moveTo(offset, H - 20);
+  ctx.lineTo(W + 24, H - 20);
+  ctx.stroke();
+  ctx.setLineDash([]);
+}
+
+function drawBarrier(b) {
+  const topH = b.gapY;
+  const botY = b.gapY + GAP;
+  const botH = H - 40 - botY;
+
+  const grad = ctx.createLinearGradient(b.x, 0, b.x + BARRIER_W, 0);
+  grad.addColorStop(0, '#2d7a63');
+  grad.addColorStop(1, '#43aa8b');
+  ctx.fillStyle = grad;
+  ctx.fillRect(b.x, 0, BARRIER_W, topH);
+  ctx.fillRect(b.x, botY, BARRIER_W, botH);
+
+  // caution stripes cap
+  ctx.fillStyle = '#f9c74f';
+  ctx.fillRect(b.x - 4, topH - 10, BARRIER_W + 8, 10);
+  ctx.fillRect(b.x - 4, botY, BARRIER_W + 8, 10);
+  ctx.fillStyle = '#1a1a2e';
+  for (let sx = b.x - 4; sx < b.x + BARRIER_W + 4; sx += 10) {
+    ctx.fillRect(sx, topH - 10, 5, 10);
+    ctx.fillRect(sx, botY, 5, 10);
+  }
+}
+
+function drawParticles() {
+  ctx.fillStyle = 'rgba(249, 199, 79, 0.6)';
+  for (const p of particles) {
+    ctx.globalAlpha = Math.max(0, p.life / 30);
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, 2.5, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+}
+
+function drawBike() {
+  ctx.save();
+  ctx.translate(bike.x, bike.y);
+  ctx.rotate(bike.angle);
+
+  // headlight beam
+  ctx.fillStyle = 'rgba(249, 199, 79, 0.25)';
+  ctx.beginPath();
+  ctx.moveTo(16, 0);
+  ctx.lineTo(70, -18);
+  ctx.lineTo(70, 18);
+  ctx.closePath();
+  ctx.fill();
+
+  // body
+  ctx.fillStyle = '#f3722c';
+  ctx.beginPath();
+  ctx.ellipse(0, 2, 16, 9, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // seat/rider
+  ctx.fillStyle = '#f4f1de';
+  ctx.beginPath();
+  ctx.arc(-4, -10, 6, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#e63946';
+  ctx.fillRect(-9, -8, 10, 10);
+
+  // wheels
+  ctx.fillStyle = '#1a1a2e';
+  ctx.beginPath();
+  ctx.arc(-11, 10, 5, 0, Math.PI * 2);
+  ctx.arc(12, 10, 5, 0, Math.PI * 2);
+  ctx.fill();
+
+  // headlight dot
+  ctx.fillStyle = '#f9c74f';
+  ctx.beginPath();
+  ctx.arc(16, 0, 3, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.restore();
+}
+
+function draw() {
+  drawSky();
+  drawSkyline();
+  barriers.forEach(drawBarrier);
+  drawParticles();
+  if (state !== 'idle') drawBike();
+  else {
+    bike.y = H / 2 + Math.sin(frame / 20) * 12;
+    drawBike();
+  }
+  drawRoad();
+}
+
+function loop() {
+  update();
+  draw();
+  frame = state === 'idle' ? frame + 1 : frame;
+  requestAnimationFrame(loop);
+}
+
+resetGame();
+draw();
+loop();
+</script>
+</body>
+</html>
