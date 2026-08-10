@@ -1,6 +1,6 @@
 # 🛵 Né Kẹt Xe Sài Gòn
 
-Một mini-game lấy cảm hứng từ Flappy Bird huyền thoại, bạn sẽ điều khiển chiếc xe máy len lỏi qua các "chốt kẹt xe" đậm chất đường phố.
+Một mini-game mình lấy cảm hứng từ Flappy Bird huyền thoại, bạn sẽ điều khiển chiếc xe máy len lỏi qua các "chốt kẹt xe" đậm chất đường phố.
 
 **🎮 Trải nghiệm tại đây:** https://quangvinh-2011.github.io/flappy-sai-gon/
 
@@ -21,6 +21,3 @@ Một mini-game lấy cảm hứng từ Flappy Bird huyền thoại, bạn sẽ 
 ## Cách chạy local
 
 Chỉ cần tải file `index.html` về và mở trực tiếp bằng trình duyệt, không cần cài đặt gì thêm.
-
-
-*Dự án nhỏ được thực hiện trong hành trình hoàn thiện portfolio cá nhân.*
